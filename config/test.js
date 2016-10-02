@@ -12,6 +12,7 @@ module.exports = {
     reporter: {
         to: 'serge.dmitriev@gmail.com',
         mail: {
+            from: 'avat12111@yandex.ru',
             service: 'Yandex',
             auth: {
                 user: 'avat12111',

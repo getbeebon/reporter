@@ -9,7 +9,6 @@ var console = require('tracer').colorConsole();
 var mailer = nodemailer.createTransport(config.reporter.mail);
 var conn = mysql.createConnection(config.mysql);
 
-
 function handleDisconnect(connection) {
     connection.on('error', function (err) {
         if (!err.fatal) {
@@ -23,19 +22,17 @@ function handleDisconnect(connection) {
         handleDisconnect(conn);
         conn.connect();
     });
-}
+};
+
 handleDisconnect(conn);
 
-//var agenda = new Agenda({db: {address: config.report.agendaDb}});
+var schedule = later.parse.text('every 1 day');
 
-var textSched = later.parse.text('every 1 min');
-
-var getReportData = function (callback, err) {
+var getReportData = function (err) {
+    var defer = new Q.defer();
     conn.query("SHOW TABLES", function (err, rows) {
-
         if (err) {
-            console.log('err', err);
-            callback('', err);
+            defer.reject(err);
         } else {
             var beginDate = moment().subtract(1, 'days').format('YYYY-MM-DD HH:mm:ss');
             var endDate = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -54,52 +51,50 @@ var getReportData = function (callback, err) {
                         });
                     }
                 });
-                return deferred.promise
+                return deferred.promise;
             }))
-                .then(function (tablesCount) {
-                    var result = "<h4>Количество записей за " + beginDate + " по " + endDate + "</h4>" +
-                        "<table border='1'><tr><td>Ключ</td><td>Количество записей</td></tr>";
-                    tablesCount.forEach(function (table) {
-                        result += "<tr><td>" + table.table + "</td><td>" + table.count + "</td></tr>";
-                    });
-                    result += "</table>";
-                    callback(result);
-                })
-                .catch(function (err) {
-                    callback('', err);
-                })
+            .then(function (tablesCount) {
+                var result = "<h4>Количество записей за " + beginDate + " по " + endDate + "</h4>" +
+                    "<table border='1'><tr><td>Ключ</td><td>Количество записей</td></tr>";
+                tablesCount.forEach(function (table) {
+                    result += "<tr><td>" + table.table + "</td><td>" + table.count + "</td></tr>";
+                });
+                result += "</table>";
+                defer.resolve(result);
+            })
+            .catch(function (err) {
+                defer.reject(err);
+            })
         }
     });
+    return defer.promise;
 };
 
 var run = function() {
     console.log('start daily report');
 
-
-    getReportData(function (data, err) {
-        if (!err) {
-            console.log('send email');
-            mailer.sendMail({
-                from: 'avat12111@yandex.ru',
-                to: config.reporter.to,
-                subject: 'beebon daily report',
-                html: data
-            }, function (err, info) {
-                if (err) {
-                    console.log('err', err);
-                }
-                if (info) {
-                    console.log('info', info);
-                }                
-            })
-        } else {
-            console.log('err', err);
-        }
-
+    getReportData()
+    .then(function (data) {        
+        console.log('send email');
+        mailer.sendMail({
+            from: config.reporter.mail.from,
+            to: config.reporter.to,
+            subject: 'beebon daily report',
+            html: data
+        }, function (err, info) {
+            if (err) {
+                console.log('err', err);
+            }
+            if (info) {
+                console.log('info', info);
+            }
+        })
     })
-
+    .catch(function(err){
+        console.log('err', err);
+    });
 };
 
 
 //run();
-var timer = later.setTimeout(run, textSched);
+var timer = later.setInterval(run, schedule);
