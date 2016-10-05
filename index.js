@@ -1,6 +1,5 @@
 var mysql = require('mysql2');
 var later = require('later');
-var config = require('config');
 var console = require('tracer').colorConsole();
 var Joi = require('joi');
 
