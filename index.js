@@ -4,6 +4,7 @@ var Joi = require('joi');
 
 var Mailer = require('./lib/mailer');
 var DailyReport = require('./lib/reports/daily/report');
+var WeeklyReport = require('./lib/reports/weekly/report');
 var configSchema = require('./lib/configSchema');
 var DBManager = require('./lib/dbmanager');
 
@@ -12,10 +13,12 @@ var server = function (config) {
     var init = function () {
         var mailer = new Mailer(config);
         var dbManager = new DBManager(config);
-        
-        var dailyReport = new DailyReport(dbManager, mailer);
 
+        var dailyReport = new DailyReport(dbManager, mailer);
+        var weeklyReport = new WeeklyReport(dbManager, mailer);
         var timer = later.setInterval(dailyReport.run, dailyReport.schedule);
+        var timer2 = later.setInterval(weeklyReport.run, weeklyReport.schedule);
+        
         console.log('start');
     };
 
@@ -25,7 +28,7 @@ var server = function (config) {
                 console.log(err);
                 process.exit(1);
             } else {
-                init();            
+                init();
             }
         });
     };
