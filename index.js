@@ -16,9 +16,9 @@ var server = function (config) {
 
         var dailyReport = new DailyReport(dbManager, mailer);
         var weeklyReport = new WeeklyReport(dbManager, mailer);
-        var timer = later.setInterval(dailyReport.run, dailyReport.schedule);
-        var timer2 = later.setInterval(weeklyReport.run, weeklyReport.schedule);
-        
+        var timer = later.setInterval(()=>dailyReport.run(), dailyReport.schedule);
+        var timer2 = later.setInterval(()=>weeklyReport.run(), weeklyReport.schedule);
+
         console.log('start');
     };
 
